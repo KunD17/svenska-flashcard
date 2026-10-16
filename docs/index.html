@@ -8,6 +8,11 @@
   <meta name="description" content="Sol – svensk ordlista">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <!-- iPhone/iPad: home-screen icon, name and full-screen mode (iOS ignores manifest icons). -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Sol">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <style>
     :root {
       --bg: #f4f6f8; --fg: #1a1f24; --muted: #6b7680;
@@ -263,6 +268,15 @@
       installPrompt = null;
     };
     addEventListener("appinstalled", () => ($("install").hidden = true));
+
+    // iPhone/iPad have no install prompt, so explain the Share-menu route instead (once dismissed, stays hidden).
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const standalone = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
+    if (isIOS && !standalone && !store.get("iosHintDismissed", false)) {
+      $("install").textContent = "To install: tap Share ⬆︎ then “Add to Home Screen” ✕";
+      $("install").hidden = false;
+      $("install").onclick = () => { $("install").hidden = true; store.set("iosHintDismissed", true); };
+    }
 
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
   </script>
