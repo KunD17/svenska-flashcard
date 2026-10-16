@@ -39,7 +39,10 @@
     }
     #status { display: flex; justify-content: space-between; align-items: center;
       color: var(--muted); font-size: .9rem; margin: 10px 2px 8px; min-height: 1.6em; }
-    #reset { padding: 2px 10px; font-size: .85rem; }
+    .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 8px;
+      border: 1px solid color-mix(in srgb, var(--muted) 40%, transparent); border-radius: 10px; overflow: hidden; }
+    .tabs button { border: 0; border-radius: 0; padding: 8px; }
+    .tabs button[aria-pressed="true"] { background: var(--back); color: var(--back-fg); font-weight: 600; }
     .stage { flex: 1; display: flex; perspective: 1200px; min-height: 0; }
     .card { position: relative; flex: 1; transform-style: preserve-3d;
       transition: transform .4s ease; cursor: pointer; user-select: none; }
@@ -53,6 +56,7 @@
       font-size: .85rem; font-weight: 600; line-height: 1.35; opacity: .65; }
     .word { font-size: clamp(1.6rem, 7.5vw, 2.6rem); font-weight: 700; overflow-wrap: anywhere; }
     .forms { display: block; font-size: .6em; font-weight: 500; opacity: .7; margin-top: .4em; }
+    .note { display: block; font-size: .5em; font-weight: 500; opacity: .75; margin-top: .8em; }
     .hint { position: absolute; bottom: 16px; font-size: .8rem; opacity: .6; }
     .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 16px; }
     .controls button { padding: 14px 8px; font-size: 1rem; }
@@ -70,14 +74,22 @@
     .sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .sheet-head h2 { font-size: 1.15rem; margin: 0; }
     #learntList { flex: 1; overflow-y: auto; margin-top: 8px; }
-    .group h3 { display: flex; justify-content: space-between; align-items: center; gap: 8px;
-      font-size: .9rem; color: var(--muted); margin: 18px 2px 8px; }
-    .row { display: flex; align-items: center; gap: 10px; background: var(--card);
+    .book { font-size: 1rem; margin: 20px 2px 8px; }
+    details { background: var(--card); border-radius: 12px; margin-bottom: 8px; }
+    summary { display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      padding: 12px 14px; cursor: pointer; font-weight: 600; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "▸"; color: var(--muted); transition: transform .2s; }
+    details[open] summary::after { transform: rotate(90deg); }
+    summary .count { margin-left: auto; color: var(--muted); font-weight: 500; font-size: .9rem; }
+    .group { padding: 0 10px 10px; }
+    .group .restoreAll { display: block; margin: 0 0 8px auto; }
+    .row { display: flex; align-items: center; gap: 10px; background: var(--bg);
       border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; }
     .row div { flex: 1; min-width: 0; }
     .row b { display: block; overflow-wrap: anywhere; }
     .row span { color: var(--muted); font-size: .9rem; }
-    .row button, .group h3 button { padding: 4px 10px; font-size: .85rem; flex-shrink: 0; }
+    .row button, .restoreAll { padding: 4px 10px; font-size: .85rem; flex-shrink: 0; }
     .emptyMsg { color: var(--muted); text-align: center; margin-top: 40px; }
   </style>
 </head>
@@ -88,6 +100,10 @@
     <select id="chapter" aria-label="Chapter"></select>
     <button id="shuffle" aria-label="Shuffle">🔀</button>
   </header>
+  <div class="tabs" role="group" aria-label="Word list">
+    <button id="tabOrdkort" data-list="Ordkort">Ordkort</button>
+    <button id="tabOrdlista" data-list="Ordlista">Ordlista</button>
+  </div>
   <div id="status"><span id="progress"></span><button id="showLearnt">✓ Learnt words</button></div>
   <div class="stage">
     <div class="card" id="card" role="button" aria-label="Flip card">
@@ -116,16 +132,30 @@
       set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
     };
     const chapterName = (k) => (/^\d+$/.test(k) ? `Kapitel ${k}` : k);
-    const id = (level, ch, sv) => `${level}|${ch}|${sv}`;
+    const LISTS = ["Ordkort", "Ordlista"];
+    const id = (level, list, ch, sv) => `${level}|${list}|${ch}|${sv}`;
 
+    // data[level][list][chapter] = [[sv, en, ordlistaEntry?], ...]
     let data = {}, deck = [], i = 0;
-    const learnt = new Set(store.get("learnt", []));
+    let list = LISTS.includes(store.get("list", null)) ? store.get("list") : "Ordkort";
+    // Learnt ids from before Ordkort existed ("level|chapter|sv") were all Ordlista words.
+    const learnt = new Set(store.get("learnt", []).map((k) =>
+      k.split("|").length === 3 ? k.replace("|", "|Ordlista|") : k));
+    const sel = () => ({ level: $("level").value, ch: $("chapter").value });
+    const cardsOf = (level, l, ch) => data[level]?.[l]?.[ch] ?? [];
 
+    // Chapters of both lists, in book order (named sections such as Klassrum first).
     function fillChapters() {
-      const chapters = Object.keys(data[$("level").value]);
-      $("chapter").innerHTML = chapters.map((k) => `<option value="${k}">${chapterName(k)}</option>`).join("");
-      const saved = store.get("chapter", {})[$("level").value];
-      if (chapters.includes(saved)) $("chapter").value = saved;
+      const level = $("level").value;
+      const keys = [...new Set(LISTS.flatMap((l) => Object.keys(data[level][l] ?? {})))]
+        .sort((a, b) => (+a || 0) - (+b || 0));
+      $("chapter").innerHTML = keys.map((k) => `<option value="${k}">${chapterName(k)}</option>`).join("");
+      const saved = store.get("chapter", {})[level];
+      if (keys.includes(saved)) $("chapter").value = saved;
+    }
+
+    function showList() {
+      LISTS.forEach((l) => $("tab" + l).setAttribute("aria-pressed", l === list));
     }
 
     function shuffle(a) {
@@ -138,26 +168,29 @@
 
     // Opening a chapter shuffles it once; 🔀 reshuffles on demand.
     function buildDeck() {
-      const level = $("level").value, ch = $("chapter").value;
+      const { level, ch } = sel();
       store.set("level", level);
+      store.set("list", list);
       store.set("chapter", { ...store.get("chapter", {}), [level]: ch });
-      deck = shuffle(data[level][ch]
-        .map(([sv, en]) => ({ sv, en, id: id(level, ch, sv) }))
+      showList();
+      deck = shuffle(cardsOf(level, list, ch)
+        .map(([sv, en, ref]) => ({ sv, en, ref, id: id(level, list, ch, sv) }))
         .filter((c) => !learnt.has(c.id)));
       i = 0;
       render();
     }
 
     function render() {
-      const level = $("level").value, ch = $("chapter").value;
+      const { level, ch } = sel();
       $("showLearnt").textContent = `✓ Learnt words (${learnt.size})`;
       $("card").classList.remove("flipped");
-      const tag = `${level}\n${chapterName(ch)}`;
+      const tag = `${level} · ${list}\n${chapterName(ch)}`;
       $("frontTag").textContent = tag;
       ["prev", "next", "learnt"].forEach((b) => ($(b).disabled = !deck.length));
       if (!deck.length) {
-        $("front").textContent = "🎉 All learnt!";
-        $("progress").textContent = "0 left";
+        const none = !cardsOf(level, list, ch).length;
+        $("front").textContent = none ? `No ${list} for ${chapterName(ch)}` : "🎉 All learnt!";
+        $("progress").textContent = none ? "" : "0 left";
         return;
       }
       const c = deck[i];
@@ -167,7 +200,12 @@
       if (m) $("front").insertAdjacentHTML("beforeend", '<span class="forms"></span>');
       if (m) $("front").lastChild.textContent = m[2];
       // Swap the answer only after the card has turned back to the front.
-      setTimeout(() => { $("back").textContent = c.en; $("backTag").textContent = tag; }, 200);
+      setTimeout(() => {
+        $("back").textContent = c.en;
+        // Ordkort: also show the Ordlista entry the meaning came from, e.g. "plugga (-r, -de, -t)".
+        if (c.ref) $("back").append(el("span", c.ref, "note"));
+        $("backTag").textContent = tag;
+      }, 200);
       $("progress").textContent = `${i + 1} / ${deck.length}`;
     }
 
@@ -192,42 +230,56 @@
     };
     let restoredHere = false; // a word of the open chapter was restored while the list was open
 
-    function restore(level, ch, words) {
-      words.forEach(([sv]) => learnt.delete(id(level, ch, sv)));
+    const expanded = new Set(); // chapters opened in the learnt list (kept while it re-renders)
+
+    function restore(level, l, ch, words) {
+      words.forEach(([sv]) => learnt.delete(id(level, l, ch, sv)));
       store.set("learnt", [...learnt]);
-      if (level === $("level").value && ch === $("chapter").value) restoredHere = true;
+      const cur = sel();
+      if (level === cur.level && l === list && ch === cur.ch) restoredHere = true;
       renderLearnt();
     }
 
     function renderLearnt() {
-      const list = $("learntList"), scroll = list.scrollTop;
-      list.replaceChildren();
+      const out = $("learntList"), scroll = out.scrollTop;
+      out.replaceChildren();
       let total = 0;
       for (const level of Object.keys(data)) {
-        for (const ch of Object.keys(data[level])) {
-          const words = data[level][ch].filter(([sv]) => learnt.has(id(level, ch, sv)));
+        let bookHeading = null;
+        // Book order: by chapter (Klassrum first), Ordkort before Ordlista within a chapter.
+        const sections = LISTS.flatMap((l) => Object.keys(data[level][l] ?? {}).map((ch) => [l, ch]))
+          .sort(([la, a], [lb, b]) => (+a || 0) - (+b || 0) || LISTS.indexOf(la) - LISTS.indexOf(lb));
+        for (const [l, ch] of sections) {
+          const words = data[level][l][ch].filter(([sv]) => learnt.has(id(level, l, ch, sv)));
           if (!words.length) continue;
           total += words.length;
+          if (!bookHeading) out.append((bookHeading = el("h3", level, "book")));
+          // Each chapter is collapsed until tapped.
+          const key = `${level}|${l}|${ch}`;
+          const box = el("details");
+          box.open = expanded.has(key);
+          box.ontoggle = () => (box.open ? expanded.add(key) : expanded.delete(key));
+          const summary = el("summary", `${chapterName(ch)} · ${l}`);
+          summary.append(el("span", String(words.length), "count"));
           const group = el("div", null, "group");
-          const head = el("h3", `${level} · ${chapterName(ch)} (${words.length})`);
-          const all = el("button", "Restore all");
-          all.onclick = () => confirm(`Put all ${words.length} words in ${level} ${chapterName(ch)} back into practice?`) && restore(level, ch, words);
-          head.append(all);
-          group.append(head);
+          const all = el("button", "Restore all", "restoreAll");
+          all.onclick = () => confirm(`Put all ${words.length} words in ${level} ${chapterName(ch)} (${l}) back into practice?`) && restore(level, l, ch, words);
+          group.append(all);
           for (const [sv, en] of words) {
             const row = el("div", null, "row"), text = el("div");
             text.append(el("b", sv), el("span", en));
             const undo = el("button", "↩ Undo");
-            undo.onclick = () => restore(level, ch, [[sv]]);
+            undo.onclick = () => restore(level, l, ch, [[sv]]);
             row.append(text, undo);
             group.append(row);
           }
-          list.append(group);
+          box.append(summary, group);
+          out.append(box);
         }
       }
       $("learntTitle").textContent = `Learnt words (${total})`;
-      if (!total) list.append(el("p", "No learnt words yet. Tap “Learnt ✓” on a card to add it here.", "emptyMsg"));
-      list.scrollTop = scroll;
+      if (!total) out.append(el("p", "No learnt words yet. Tap “Learnt ✓” on a card to add it here.", "emptyMsg"));
+      out.scrollTop = scroll;
     }
 
     $("showLearnt").onclick = () => {
@@ -240,11 +292,13 @@
     $("learntDialog").onclose = () => (restoredHere ? buildDeck() : render());
     $("level").onchange = () => { fillChapters(); buildDeck(); };
     $("chapter").onchange = buildDeck;
+    LISTS.forEach((l) => ($("tab" + l).onclick = () => { if (l !== list) { list = l; buildDeck(); } }));
 
     fetch("cards.json")
       .then((r) => r.json())
       .then((d) => {
         data = d;
+        store.set("learnt", [...learnt]); // save migrated ids
         const levels = Object.keys(d);
         $("level").innerHTML = levels.map((l) => `<option>${l}</option>`).join("");
         const saved = store.get("level", null);

@@ -8,7 +8,7 @@ output file for the same level are replaced; everything else is kept, so you can
 chapters and books one run at a time.
 
 Output format (compact, to keep the app light):
-    {"B1/B2": {"1": [["associera med (-r, -de, -t)", "associate with"], ...], ...}, "A1/A2": {...}}
+    {"B1/B2": {"Ordlista": {"1": [["associera med (-r, -de, -t)", "associate with"], ...], ...}}, ...}
 Chapter keys are the chapter number, or a section name such as "Klassrum".
 
 In these PDFs the Swedish entry is set in 9pt regular type and the English
@@ -125,7 +125,7 @@ def main():
 
     out = Path(args.out)
     deck = json.loads(out.read_text()) if out.exists() else {}
-    level = deck.setdefault(args.level, {})
+    level = deck.setdefault(args.level, {}).setdefault("Ordlista", {})
     for key, cards in new.items():
         missing = [sv for sv, en in cards if not en]
         level[key] = [c for c in cards if c[1]]
@@ -133,10 +133,10 @@ def main():
         if missing:
             print(f"  skipped (no English in the PDF): {missing}")
     # Keep chapters in book order: named sections first, then by number.
-    deck[args.level] = dict(sorted(level.items(), key=lambda kv: (kv[0].isdigit(), int(kv[0]) if kv[0].isdigit() else 0)))
+    deck[args.level]["Ordlista"] = dict(sorted(level.items(), key=lambda kv: (kv[0].isdigit(), int(kv[0]) if kv[0].isdigit() else 0)))
     out.write_text(json.dumps(dict(sorted(deck.items())), ensure_ascii=False, separators=(",", ":")))
-    total = sum(len(c) for lv in deck.values() for c in lv.values())
-    print(f"{total} cards total in {out} ({out.stat().st_size // 1024} KB)")
+    total = sum(len(c) for lv in deck.values() for c in lv.get("Ordlista", {}).values())
+    print(f"{total} Ordlista cards total in {out} ({out.stat().st_size // 1024} KB)")
 
 
 if __name__ == "__main__":
