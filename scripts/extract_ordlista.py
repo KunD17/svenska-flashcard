@@ -24,6 +24,15 @@ import pymupdf
 SV_SIZE, EN_SIZE, SECTION_SIZE = 9.0, 8.5, 18.0
 INDENT = 4  # points; wrapped lines are indented relative to their column
 
+# Typesetting slips in the PDFs, where part of the Swedish is set in the English style:
+# (swedish, english) as extracted -> as it should be.
+FIXES = {
+    ("kryssa för (-r, -de, -t)", "för tick, cross"): ("kryssa för (-r, -de, -t)", "tick, cross"),
+    ("sluta (-r, -de, -t)", "på end with"): ("sluta (-r, -de, -t) på", "end with"),
+    ("göra (gör, gjorde, gjort)", "slut break up"): ("göra (gör, gjorde, gjort) slut", "break up"),
+    ("skriva (-er, skrev, skrivit)", "sign up"): ("skriva (-er, skrev, skrivit) upp sig", "sign up"),
+}
+
 
 def parse_chapters(spec):
     if spec == "all":
@@ -109,6 +118,7 @@ def extract(pdf_path):
             m = re.match(r"^(.*\))\s+([^()]+)$", c[0])
             if not c[1] and m:
                 c[0], c[1] = m.group(1), m.group(2)
+            c[0], c[1] = FIXES.get((c[0], c[1]), (c[0], c[1]))
     return chapters
 
 

@@ -57,17 +57,20 @@ def extract_words(pdf_path):
     """Return {chapter: [word, ...]} in page order."""
     chapters, chapter = {}, None
     for page in pymupdf.open(pdf_path):
-        for block in page.get_text("dict")["blocks"]:
+        blocks = page.get_text("dict")["blocks"]
+        # A chapter starts at the top of a page, but its "Kapitel N" heading can come after
+        # the words in the PDF's text order, so find it before reading the page's words.
+        for line in (l for b in blocks for l in b.get("lines", [])):
+            text = "".join(s["text"] for s in line["spans"]).strip()
+            if text.startswith("Kapitel") and any(round(s["size"], 1) == HEADING_SIZE for s in line["spans"]):
+                chapter = text.split()[1]
+                chapters.setdefault(chapter, [])
+        for block in blocks:
             cells = []  # each line is one card; a card whose text wraps continues below
             for line in block.get("lines", []):
                 spans = [s for s in line["spans"] if "Acumin" in s["font"]]
                 text = "".join(s["text"] for s in spans).strip()
-                if not text:
-                    continue
-                if any(round(s["size"], 1) == HEADING_SIZE for s in spans):
-                    if text.startswith("Kapitel"):
-                        chapter = text.split()[1]
-                        chapters.setdefault(chapter, [])
+                if not text or any(round(s["size"], 1) == HEADING_SIZE for s in spans):
                     continue
                 if chapter is None or max(round(s["size"], 1) for s in spans) < 10:
                     continue  # header/footer
