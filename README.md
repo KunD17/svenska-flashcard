@@ -1,4 +1,4 @@
-# svenska-flashcard
+# Sol — svensk ordlista
 
 Flashcards for the *Rivstart* word lists (Ordlista, engelska). Front: the Swedish entry with its
 forms, e.g. `associera med (-r, -de, -t)`. Back: the English meaning, `associate with`. The book
