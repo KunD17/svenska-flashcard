@@ -53,9 +53,13 @@
     .controls button { padding: 14px 8px; font-size: 1rem; }
     #learnt { background: var(--accent); color: #1a1f24; border-color: var(--accent); font-weight: 600; }
     button:disabled { opacity: .4; }
+    #install { margin-bottom: 10px; padding: 12px; font-weight: 600;
+      background: var(--accent); color: #1a1f24; border-color: var(--accent); }
+    #install[hidden] { display: none; }
   </style>
 </head>
 <body>
+  <button id="install" hidden>⬇ Install Sol as an app</button>
   <header>
     <select id="level" aria-label="Level"></select>
     <select id="chapter" aria-label="Chapter"></select>
@@ -170,6 +174,21 @@
         buildDeck();
       })
       .catch(() => { $("front").textContent = "Couldn't load cards."; });
+
+    // Chrome only fires this when Sol can be installed and isn't installed yet. Its dialog
+    // installs a real app (own icon, no browser bar), unlike "Add to Home screen > Create shortcut".
+    let installPrompt = null;
+    addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      installPrompt = e;
+      $("install").hidden = false;
+    });
+    $("install").onclick = () => {
+      $("install").hidden = true;
+      installPrompt?.prompt();
+      installPrompt = null;
+    };
+    addEventListener("appinstalled", () => ($("install").hidden = true));
 
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
   </script>
