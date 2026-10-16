@@ -53,3 +53,10 @@ changes, open it once while online; the update appears the time after that.
 - **Learnt ✓** hides the word for good (saved on the phone). Tap **"N learnt · reset"** to bring a
   chapter's learnt words back.
 - 🔀 shuffles.
+
+## Copyright
+
+© 2026 Kunal Deoskar. All rights reserved. See [LICENSE](LICENSE).
+
+The word lists come from *Rivstart* A1/A2 and B1/B2 (Ordlista), © Paula Levy Scherrer,
+Karl Lindemalm and Natur & Kultur. They are not covered by this copyright.

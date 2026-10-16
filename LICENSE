@@ -1,0 +1,15 @@
+Copyright (c) 2026 Kunal Deoskar. All rights reserved.
+
+This covers the Sol app: its source code (docs/index.html, docs/sw.js,
+docs/manifest.webmanifest, scripts/), its design, and its icons.
+
+No permission is granted to copy, modify, distribute, or publish this software
+or any part of it, in whole or in part, without prior written permission from
+the copyright holder.
+
+Third-party content
+-------------------
+The vocabulary in docs/cards.json is taken from the Rivstart A1/A2 and B1/B2
+word lists (Ordlista), © Paula Levy Scherrer, Karl Lindemalm and Natur & Kultur.
+It is not covered by this notice and remains the property of its copyright
+holders.
