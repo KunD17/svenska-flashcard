@@ -429,3 +429,6 @@ FodyWeavers.xsd
 
 # macOS
 .DS_Store
+
+# Folkets lexikon (downloaded by scripts/add_word_classes.py)
+data/folkets_sv_en_public.xml

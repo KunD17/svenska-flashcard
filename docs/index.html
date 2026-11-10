@@ -54,6 +54,8 @@
     .back { background: var(--back); color: var(--back-fg); transform: rotateY(180deg); }
     .tag { position: absolute; top: 16px; left: 18px; text-align: left; white-space: pre-line;
       font-size: .85rem; font-weight: 600; line-height: 1.35; opacity: .65; }
+    .cls { position: absolute; top: 16px; right: 18px; font-size: .8rem; font-style: italic; opacity: .65; }
+    #shuffle[aria-pressed="true"] { background: var(--back); border-color: var(--back); }
     .word { font-size: clamp(1.6rem, 7.5vw, 2.6rem); font-weight: 700; overflow-wrap: anywhere; }
     .forms { display: block; font-size: .6em; font-weight: 500; opacity: .7; margin-top: .4em; }
     .note { display: block; font-size: .5em; font-weight: 500; opacity: .75; margin-top: .8em; }
@@ -99,7 +101,7 @@
   <header>
     <select id="level" aria-label="Level"></select>
     <select id="chapter" aria-label="Chapter"></select>
-    <button id="shuffle" aria-label="Shuffle">🔀</button>
+    <button id="shuffle" aria-label="Shuffle" aria-pressed="false">🔀</button>
   </header>
   <div class="tabs" role="group" aria-label="Word list">
     <button id="tabOrdkort" data-list="Ordkort">Ordkort</button>
@@ -108,8 +110,8 @@
   <div id="status"><span id="progress"></span><button id="direction" aria-label="Card direction"></button><button id="showLearnt">✓ Learnt words</button></div>
   <div class="stage">
     <div class="card" id="card" role="button" aria-label="Flip card">
-      <div class="face front"><div class="tag" id="frontTag"></div><div class="word" id="front"></div><div class="hint">tap to flip</div></div>
-      <div class="face back"><div class="tag" id="backTag"></div><div class="word" id="back"></div></div>
+      <div class="face front"><div class="tag" id="frontTag"></div><div class="cls" id="frontCls"></div><div class="word" id="front"></div><div class="hint">tap to flip</div></div>
+      <div class="face back"><div class="tag" id="backTag"></div><div class="cls" id="backCls"></div><div class="word" id="back"></div></div>
     </div>
   </div>
   <div class="controls">
@@ -138,6 +140,8 @@
 
     // data[level][list][chapter] = [[sv, en, ordlistaEntry?], ...]
     let data = {}, deck = [], i = 0;
+    let classOf = new Map(); // swedish card text -> "noun", "verb", ... (from classes.json)
+    let shuffled = false; // cards start in book order until 🔀 is switched on
     let list = LISTS.includes(store.get("list", null)) ? store.get("list") : "Ordkort";
     let reverse = store.get("reverse", false); // English on the front, Swedish on the back
     const showDirection = () => ($("direction").textContent = reverse ? "EN → SV" : "SV → EN");
@@ -170,16 +174,17 @@
       return a;
     }
 
-    // Opening a chapter shuffles it once; 🔀 reshuffles on demand.
+    // Cards come in book order; with 🔀 on, each chapter is shuffled when opened.
     function buildDeck() {
       const { level, ch } = sel();
       store.set("level", level);
       store.set("list", list);
       store.set("chapter", { ...store.get("chapter", {}), [level]: ch });
       showList();
-      deck = shuffle(cardsOf(level, list, ch)
+      deck = cardsOf(level, list, ch)
         .map(([sv, en, ref]) => ({ sv, en, ref, id: id(level, list, ch, sv) }))
-        .filter((c) => !learnt.has(c.id)));
+        .filter((c) => !learnt.has(c.id));
+      if (shuffled) shuffle(deck);
       i = 0;
       render();
     }
@@ -191,6 +196,7 @@
       const tag = `${level} · ${list}\n${chapterName(ch)}`;
       $("frontTag").textContent = tag;
       ["prev", "next", "learnt"].forEach((b) => ($(b).disabled = !deck.length));
+      $("frontCls").textContent = "";
       if (!deck.length) {
         const none = !cardsOf(level, list, ch).length;
         $("front").textContent = none ? `No ${list} for ${chapterName(ch)}` : "🎉 All learnt!";
@@ -205,10 +211,13 @@
       const note = c.ref ? [el("span", c.ref, "note")] : [];
       const [front, back] = reverse ? [[c.en], [...sv, ...note]] : [sv, [c.en, ...note]];
       $("front").replaceChildren(...front);
+      const cls = classOf.get(c.sv) ?? "";
+      $("frontCls").textContent = cls;
       // Swap the answer only after the card has turned back to the front.
       setTimeout(() => {
         $("back").replaceChildren(...back);
         $("backTag").textContent = tag;
+        $("backCls").textContent = cls;
       }, 200);
       $("progress").textContent = `${i + 1} / ${deck.length}`;
     }
@@ -223,7 +232,11 @@
       if (i >= deck.length) i = 0;
       render();
     };
-    $("shuffle").onclick = () => { shuffle(deck); i = 0; render(); };
+    $("shuffle").onclick = () => {
+      shuffled = !shuffled;
+      $("shuffle").setAttribute("aria-pressed", shuffled);
+      buildDeck();
+    };
     $("direction").onclick = () => {
       reverse = !reverse;
       store.set("reverse", reverse);
@@ -304,10 +317,12 @@
     $("chapter").onchange = buildDeck;
     LISTS.forEach((l) => ($("tab" + l).onclick = () => { if (l !== list) { list = l; buildDeck(); } }));
 
-    fetch("cards.json")
-      .then((r) => r.json())
-      .then((d) => {
+    // Word classes are optional: without classes.json the cards just have no label.
+    const classes = fetch("classes.json").then((r) => r.json()).catch(() => ({}));
+    Promise.all([fetch("cards.json").then((r) => r.json()), classes])
+      .then(([d, cl]) => {
         data = d;
+        classOf = new Map(Object.entries(cl).flatMap(([c, words]) => words.map((w) => [w, c])));
         store.set("learnt", [...learnt]); // save migrated ids
         const levels = Object.keys(d);
         $("level").innerHTML = levels.map((l) => `<option>${l}</option>`).join("");

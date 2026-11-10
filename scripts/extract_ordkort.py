@@ -134,7 +134,7 @@ def main():
             source = "ordlista" if hit else "deepl" if word in deepl else "missing"
             if source == "deepl":
                 hit = (deepl[word], "")
-            if word in overrides:
+            if {"en", "forms"} & overrides.get(word, {}).keys():  # "class" is for add_word_classes.py
                 meaning, entry = hit or (None, "")
                 hit = (overrides[word].get("en", meaning), overrides[word].get("forms", entry))
                 source = "override"

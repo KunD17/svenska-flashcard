@@ -8,5 +8,7 @@
  "går": {"en": "go, walk"},
  "svarar": {"en": "answer, reply", "forms": "svara (-r, -de, -t)"},
  "en morgon": {"forms": "morgon (-en, morgnar, morgnarna)"},
- "en kväll": {"forms": "kväll (-en, -ar, -arna)"}
+ "en kväll": {"forms": "kväll (-en, -ar, -arna)"},
+ "nia": {"class": "noun"},
+ "så": {"class": "adverb"}
 }

@@ -49,6 +49,17 @@ and DeepL:
 "går": {"en": "go, walk"}
 ```
 
+Last, work out each card's word class (noun, verb, adjective, …), shown top-right on the card.
+It uses [Folkets lexikon](https://folkets-lexikon.csc.kth.se/folkets/), downloaded to `data/` on
+the first run, and writes `docs/classes.json`. Re-run it whenever the cards change:
+
+```sh
+python scripts/add_word_classes.py
+```
+
+To set a word class by hand, add `"class"` to the word's entry in `data/overrides.json`, keyed by the
+card's Swedish text, e.g. `"Danmark": {"class": "proper noun"}`.
+
 ## 3. Try it on your computer
 
 ```sh
@@ -73,7 +84,8 @@ changes, open it once while online; the update appears the time after that.
 - Tap the card to flip it. **← Back** / **Next →** move through the chapter.
 - **Learnt ✓** hides the word for good (saved on the phone). **✓ Learnt words** lists them by book
   and chapter (tap a chapter to expand it), with **Undo** and **Restore all**.
-- 🔀 shuffles.
+- Cards come in book order. 🔀 switches shuffling on (highlighted) and off.
+- The word class (noun, verb, adjective, …) is shown top-right on the card.
 - **SV → EN** / **EN → SV** switches which side of the card comes first, to practise from English
   to Swedish (remembered on the phone).
 
@@ -83,3 +95,7 @@ changes, open it once while online; the update appears the time after that.
 
 The word lists come from *Rivstart* A1/A2 and B1/B2 (Ordlista), © Paula Levy Scherrer,
 Karl Lindemalm and Natur & Kultur. They are not covered by this copyright.
+
+The word classes in `docs/classes.json` come from [Folkets lexikon](https://folkets-lexikon.csc.kth.se/folkets/)
+(KTH), licensed under [CC BY-SA 2.5](http://creativecommons.org/licenses/by-sa/2.5/); that file is
+shared under the same licence.
