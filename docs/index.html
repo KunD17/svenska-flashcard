@@ -65,7 +65,8 @@
     #install { margin-bottom: 10px; padding: 12px; font-weight: 600;
       background: var(--accent); color: #1a1f24; border-color: var(--accent); }
     #install[hidden] { display: none; }
-    #showLearnt { padding: 4px 12px; font-size: .85rem; }
+    #showLearnt, #direction { padding: 4px 12px; font-size: .85rem; white-space: nowrap; }
+    #progress { min-width: 4.5em; }
     dialog { border: 0; padding: 0; width: 100%; max-width: 560px; height: 100%; max-height: 100%;
       margin: 0 auto; background: var(--bg); color: var(--fg); }
     dialog::backdrop { background: rgb(0 0 0 / .4); }
@@ -104,7 +105,7 @@
     <button id="tabOrdkort" data-list="Ordkort">Ordkort</button>
     <button id="tabOrdlista" data-list="Ordlista">Ordlista</button>
   </div>
-  <div id="status"><span id="progress"></span><button id="showLearnt">✓ Learnt words</button></div>
+  <div id="status"><span id="progress"></span><button id="direction" aria-label="Card direction"></button><button id="showLearnt">✓ Learnt words</button></div>
   <div class="stage">
     <div class="card" id="card" role="button" aria-label="Flip card">
       <div class="face front"><div class="tag" id="frontTag"></div><div class="word" id="front"></div><div class="hint">tap to flip</div></div>
@@ -138,6 +139,9 @@
     // data[level][list][chapter] = [[sv, en, ordlistaEntry?], ...]
     let data = {}, deck = [], i = 0;
     let list = LISTS.includes(store.get("list", null)) ? store.get("list") : "Ordkort";
+    let reverse = store.get("reverse", false); // English on the front, Swedish on the back
+    const showDirection = () => ($("direction").textContent = reverse ? "EN → SV" : "SV → EN");
+    showDirection();
     // Learnt ids from before Ordkort existed ("level|chapter|sv") were all Ordlista words.
     const learnt = new Set(store.get("learnt", []).map((k) =>
       k.split("|").length === 3 ? k.replace("|", "|Ordlista|") : k));
@@ -196,14 +200,14 @@
       const c = deck[i];
       // "associera med (-r, -de, -t)" -> big word, forms on a smaller line below.
       const m = c.sv.match(/^(.*?)\s+(\(.*)$/);
-      $("front").textContent = m ? m[1] : c.sv;
-      if (m) $("front").insertAdjacentHTML("beforeend", '<span class="forms"></span>');
-      if (m) $("front").lastChild.textContent = m[2];
+      const sv = m ? [m[1], el("span", m[2], "forms")] : [c.sv];
+      // Ordkort: the answer also shows the Ordlista entry the meaning came from, e.g. "plugga (-r, -de, -t)".
+      const note = c.ref ? [el("span", c.ref, "note")] : [];
+      const [front, back] = reverse ? [[c.en], [...sv, ...note]] : [sv, [c.en, ...note]];
+      $("front").replaceChildren(...front);
       // Swap the answer only after the card has turned back to the front.
       setTimeout(() => {
-        $("back").textContent = c.en;
-        // Ordkort: also show the Ordlista entry the meaning came from, e.g. "plugga (-r, -de, -t)".
-        if (c.ref) $("back").append(el("span", c.ref, "note"));
+        $("back").replaceChildren(...back);
         $("backTag").textContent = tag;
       }, 200);
       $("progress").textContent = `${i + 1} / ${deck.length}`;
@@ -220,6 +224,12 @@
       render();
     };
     $("shuffle").onclick = () => { shuffle(deck); i = 0; render(); };
+    $("direction").onclick = () => {
+      reverse = !reverse;
+      store.set("reverse", reverse);
+      showDirection();
+      render();
+    };
 
     // Learnt words list, grouped by book and chapter in book order.
     const el = (tag, text, cls) => {

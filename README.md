@@ -74,6 +74,8 @@ changes, open it once while online; the update appears the time after that.
 - **Learnt ✓** hides the word for good (saved on the phone). **✓ Learnt words** lists them by book
   and chapter (tap a chapter to expand it), with **Undo** and **Restore all**.
 - 🔀 shuffles.
+- **SV → EN** / **EN → SV** switches which side of the card comes first, to practise from English
+  to Swedish (remembered on the phone).
 
 ## Copyright
 
