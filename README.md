@@ -39,6 +39,16 @@ python scripts/translate_missing.py      # saves to data/deepl.json (edit by han
 # then re-run the two extract_ordkort.py commands above
 ```
 
+To fix a card by hand (wrong meaning, missing forms on the back), add it to `data/overrides.json`
+and re-run the two `extract_ordkort.py` commands. Each entry is keyed by the Ordkort word and can
+set the meaning (`en`), the forms shown on the back (`forms`), or both; they win over the Ordlista
+and DeepL:
+
+```json
+"vad": {"en": "what", "forms": "vad"},
+"går": {"en": "go, walk"}
+```
+
 ## 3. Try it on your computer
 
 ```sh

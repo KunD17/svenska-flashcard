@@ -10,6 +10,8 @@ cards already in the output file. For each word card, in order of preference:
   2. the same, after turning a present-tense verb into its infinitive ("pluggar" -> "plugga");
   3. a DeepL translation saved in data/deepl.json (see translate_missing.py).
 Words with no meaning yet are left out of the app and listed in data/missing.json.
+Hand-made fixes in data/overrides.json ({"word": {"en": meaning, "forms": entry}}, either key
+optional) are applied last and win over both sources.
 
 Output: cards.json[level]["Ordkort"][chapter] = [[word, meaning, ordlista_entry], ...]
 (ordlista_entry is "" when the meaning came from DeepL).
@@ -113,6 +115,7 @@ def main():
     ap.add_argument("--out", default="docs/cards.json")
     ap.add_argument("--deepl", default="data/deepl.json")
     ap.add_argument("--missing", default="data/missing.json")
+    ap.add_argument("--overrides", default="data/overrides.json")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -120,18 +123,24 @@ def main():
     index = build_index(deck)
     deepl_path = Path(args.deepl)
     deepl = json.loads(deepl_path.read_text()) if deepl_path.exists() else {}
+    overrides_path = Path(args.overrides)
+    overrides = json.loads(overrides_path.read_text()) if overrides_path.exists() else {}
 
-    result, missing, stats = {}, [], {"ordlista": 0, "deepl": 0, "missing": 0}
+    result, missing, stats = {}, [], {"ordlista": 0, "deepl": 0, "override": 0, "missing": 0}
     for chapter, words in extract_words(args.pdf).items():
         cards = []
         for word in dict.fromkeys(words):  # drop duplicates within a chapter, keep order
             hit = lookup(word, args.level, chapter, index)
-            if hit:
+            source = "ordlista" if hit else "deepl" if word in deepl else "missing"
+            if source == "deepl":
+                hit = (deepl[word], "")
+            if word in overrides:
+                meaning, entry = hit or (None, "")
+                hit = (overrides[word].get("en", meaning), overrides[word].get("forms", entry))
+                source = "override"
+            if hit and hit[0]:
                 cards.append([word, hit[0], hit[1]])
-                stats["ordlista"] += 1
-            elif word in deepl:
-                cards.append([word, deepl[word], ""])
-                stats["deepl"] += 1
+                stats[source] += 1
             else:
                 missing.append({"level": args.level, "chapter": chapter, "sv": word})
                 stats["missing"] += 1
@@ -147,7 +156,8 @@ def main():
     missing_path.write_text(json.dumps(missing, ensure_ascii=False, indent=1) + "\n")
 
     print(f"{args.level} Ordkort: {sum(map(len, result.values()))} cards in {len(result)} chapters "
-          f"(meaning from Ordlista: {stats['ordlista']}, DeepL: {stats['deepl']}, no meaning yet: {stats['missing']})")
+          f"(meaning from Ordlista: {stats['ordlista']}, DeepL: {stats['deepl']}, "
+          f"overrides: {stats['override']}, no meaning yet: {stats['missing']})")
     if stats["missing"]:
         print(f"  words without a meaning are listed in {missing_path}")
 

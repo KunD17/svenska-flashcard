@@ -1,0 +1,12 @@
+{
+ "vad": {"en": "what", "forms": "vad"},
+ "är": {"en": "is, are", "forms": "vara (är, var, varit)"},
+ "en fråga": {"en": "question", "forms": "fråga (-n, -or, -orna)"},
+ "längtar": {"en": "long (for), miss", "forms": "längta (-r, -de, -t)"},
+ "en mössa": {"en": "beanie, hat"},
+ "sådär": {"en": "so-so", "forms": "sådär"},
+ "går": {"en": "go, walk"},
+ "svarar": {"en": "answer, reply", "forms": "svara (-r, -de, -t)"},
+ "en morgon": {"forms": "morgon (-en, morgnar, morgnarna)"},
+ "en kväll": {"forms": "kväll (-en, -ar, -arna)"}
+}
