@@ -80,7 +80,8 @@ changes, open it once while online; the update appears the time after that.
 ## Using the app
 
 - Choose the book (A1/A2 or B1/B2), the chapter, and **Ordkort** or **Ordlista**.
-  Ordkort cards show the Ordlista entry (with its forms) under the meaning.
+  The back always repeats the Swedish under the meaning (for Ordkort, the Ordlista entry with its
+  forms when there is one).
 - Tap the card to flip it. **← Back** / **Next →** move through the chapter.
 - **Learnt ✓** hides the word for good (saved on the phone). **✓ Learnt words** lists them by book
   and chapter (tap a chapter to expand it), with **Undo** and **Restore all**.

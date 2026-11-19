@@ -8,13 +8,14 @@ cards already in the output file. For each word card, in order of preference:
   1. an Ordlista entry with the same word (same chapter, then same book, then other book),
      ignoring articles ("ett barn" ~ "barn (-et, -, -en)") and grammar forms;
   2. the same, after turning a present-tense verb into its infinitive ("pluggar" -> "plugga");
-  3. a DeepL translation saved in data/deepl.json (see translate_missing.py).
+  3. a DeepL translation saved in data/deepl.json (see translate_missing.py), with the word's
+     forms from data/forms.json (see fetch_forms.py) as its entry.
 Words with no meaning yet are left out of the app and listed in data/missing.json.
 Hand-made fixes in data/overrides.json ({"word": {"en": meaning, "forms": entry}}, either key
 optional) are applied last and win over both sources.
 
 Output: cards.json[level]["Ordkort"][chapter] = [[word, meaning, ordlista_entry], ...]
-(ordlista_entry is "" when the meaning came from DeepL).
+(ordlista_entry is "" when the meaning came from DeepL and fetch_forms.py found no forms).
 """
 import argparse
 import json
@@ -116,6 +117,7 @@ def main():
     ap.add_argument("--deepl", default="data/deepl.json")
     ap.add_argument("--missing", default="data/missing.json")
     ap.add_argument("--overrides", default="data/overrides.json")
+    ap.add_argument("--forms", default="data/forms.json")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -125,6 +127,8 @@ def main():
     deepl = json.loads(deepl_path.read_text()) if deepl_path.exists() else {}
     overrides_path = Path(args.overrides)
     overrides = json.loads(overrides_path.read_text()) if overrides_path.exists() else {}
+    forms_path = Path(args.forms)
+    forms = json.loads(forms_path.read_text()) if forms_path.exists() else {}
 
     result, missing, stats = {}, [], {"ordlista": 0, "deepl": 0, "override": 0, "missing": 0}
     for chapter, words in extract_words(args.pdf).items():
@@ -133,7 +137,7 @@ def main():
             hit = lookup(word, args.level, chapter, index)
             source = "ordlista" if hit else "deepl" if word in deepl else "missing"
             if source == "deepl":
-                hit = (deepl[word], "")
+                hit = (deepl[word], forms.get(word, ""))
             if {"en", "forms"} & overrides.get(word, {}).keys():  # "class" is for add_word_classes.py
                 meaning, entry = hit or (None, "")
                 hit = (overrides[word].get("en", meaning), overrides[word].get("forms", entry))

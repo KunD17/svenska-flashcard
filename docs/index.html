@@ -207,9 +207,12 @@
       // "associera med (-r, -de, -t)" -> big word, forms on a smaller line below.
       const m = c.sv.match(/^(.*?)\s+(\(.*)$/);
       const sv = m ? [m[1], el("span", m[2], "forms")] : [c.sv];
-      // Ordkort: the answer also shows the Ordlista entry the meaning came from, e.g. "plugga (-r, -de, -t)".
-      const note = c.ref ? [el("span", c.ref, "note")] : [];
-      const [front, back] = reverse ? [[c.en], [...sv, ...note]] : [sv, [c.en, ...note]];
+      // The English side always repeats the Swedish: for Ordkort the Ordlista entry the meaning came
+      // from, e.g. "plugga (-r, -de, -t)", otherwise the card's own word.
+      const note = (text) => (text ? [el("span", text, "note")] : []);
+      const [front, back] = reverse
+        ? [[c.en], [...sv, ...note(c.ref !== c.sv && c.ref)]]
+        : [sv, [c.en, ...note(c.ref || c.sv)]];
       $("front").replaceChildren(...front);
       const cls = classOf.get(c.sv) ?? "";
       $("frontCls").textContent = cls;
