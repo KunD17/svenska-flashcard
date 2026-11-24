@@ -432,3 +432,6 @@ FodyWeavers.xsd
 
 # Folkets lexikon (downloaded by scripts/add_word_classes.py)
 data/folkets_sv_en_public.xml
+
+# Feedback documents (private, not for the public repo)
+Feedback*
